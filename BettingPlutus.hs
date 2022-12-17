@@ -47,7 +47,7 @@ PlutusTx.unstableMakeIsData ''BetDatum
 {-# INLINABLE validateBet #-}
 validateBet :: BetDatum -> Integer -> ScriptContext -> Bool
 validateBet pDat x ctx =
-  traceIfFalse "Wrong Guess" $ x == solutionNum &&
+  traceIfFalse "Wrong Guess" $ x == randomNum &&
   traceIfFalse "Betting start time is not reached" deadlineReached &&
   traceIfFalse "beneficiary's taker signature missing" signedByBeneficiaryTaker || -- If both beneficiary false than validate will be false
   traceIfFalse "beneficiary's Placer signature missing" signedByBeneficiaryPlacer
@@ -97,7 +97,7 @@ data PlaceParams = PlaceParams
 data TakeParams = TakeParams
     { tpAmount    :: !Value
     , tpBeneficiaryPlacer :: !PaymentPubKeyHash -- Placer's wallet addr
-    , tpDeadline :: !POSIXTime
+    , tpStartFrom :: !POSIXTime
     }
     deriving (Prelude.Eq, Prelude.Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -136,7 +136,7 @@ takeBet :: AsContractError e => TakeParams -> Contract () BettingSchema e ()
 takeBet tp = do
     pkh   <- ownPaymentPubKeyHash
     let datum = BetDatum 
-                { bDeadline = tpDeadline tp
+                { bDeadline = tpStartFrom tp
                 , bBeneficiaryTaker = pkh
                 , bBeneficiaryPlacer = tpBeneficiaryPlacer tp
                 }
@@ -149,7 +149,7 @@ takeBet tp = do
         (show $ tpAmount tp)
         (show $ tpBeneficiaryPlacer tp)
 
-solutionNum = 2
+randomNum = 2 -- random Number still hardcoded
 
 -- | The "guess" contract endpoint.
 guess :: AsContractError e => GuessParams -> Contract () BettingSchema e ()
@@ -181,7 +181,7 @@ guess (GuessParams guessValue) = do
         Left _          -> False
         Right (Datum e) -> case PlutusTx.fromBuiltinData e of
             Nothing -> False
-            Just d  -> bBeneficiaryTaker d == pkh || bBeneficiaryPlacer d == pkh && bDeadline d <= now && solutionNum == guessValue
+            Just d  -> bBeneficiaryTaker d == pkh || bBeneficiaryPlacer d == pkh && bDeadline d <= now && randomNum == guessValue
 
 -- | Betting endpoints.
 endpoints :: AsContractError e => Contract () BettingSchema e ()
